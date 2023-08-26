@@ -1,0 +1,213 @@
+@page "/"
+
+@using System 
+@using System.IO
+@using DataKodBlazorServer.Data
+@using DataKodApp.Repo
+@using static FormEnums
+@using System.ComponentModel.DataAnnotations
+@inject IWebHostEnvironment Environment
+@inject IIssueRepository Repository
+@inject NavigationManager navManger
+
+<EditForm Model="@issue" OnValidSubmit="@CreateIssue">
+    <h3>Add Issue</h3>
+    <hr />
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label for="firstName" class="col-sm-2 col-form-label">
+            First Name
+        </label>
+        <div class="col-sm-10">
+            <InputText id="firstName" class="form-control" placeholder="First Name"
+                       @bind-Value="issue!.FirstName" />
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label for="lastName" class="col-sm-2 col-form-label">
+            Last Name
+        </label>
+        <div class="col-sm-10">
+            <InputText id="lastName" class="form-control" placeholder="Last Name"
+                       @bind-Value="issue!.LastName" />
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label for="email" class="col-sm-2 col-form-label">
+            Email
+        </label>
+        <div class="col-sm-10">
+            <InputText id="email" class="form-control" placeholder="Email"
+                       @bind-Value="issue!.Email" />
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label class="col-sm-2 col-form-label">
+            Ticket Type
+        </label>
+        <div class="col-sm-10">
+        <InputRadioGroup @bind-Value="issue!.ticket">
+            @foreach (var type in (TicketType[])Enum
+                .GetValues(typeof(TicketType)))
+            {
+                <div>
+                    <label>
+                        <InputRadio Value="@type" />
+                        @type
+                    </label>
+                </div>
+            }
+        </InputRadioGroup>
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label class="col-sm-2 col-form-label">
+            Priority
+        </label>
+        <div class="col-sm-10">
+        <InputRadioGroup @bind-Value="issue!.priority">
+            @foreach (var priority in (Priority[])Enum
+                .GetValues(typeof(Priority)))
+            {
+                <div>
+                    <label>
+                        <InputRadio Value="@priority" />
+                        @priority
+                    </label>
+                </div>
+            }
+        </InputRadioGroup>
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label class="col-sm-2 col-form-label">
+            Browser
+        </label>
+        <div class="col-sm-10">
+            <InputSelect @bind-Value="issue!.Browser">
+                <option value="1">Chrome</option>
+                <option value="2">Opera</option>
+                <option value="3">Firefox</option>
+                <option value="4">Explorer</option>
+            </InputSelect>
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label class="col-sm-2 col-form-label">
+            Browser Version
+        </label>
+        <div class="col-sm-10">
+            <InputText class="form-control" placeholder="Browser Version"
+                       @bind-Value="issue.BrowserVersion" />
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label class="col-sm-2 col-form-label">
+            Operating System
+        </label>
+        <div class="col-sm-10">
+            <InputSelect @bind-Value="issue!.OperatingSystem">
+                <option value="1">Windows</option>
+                <option value="2">Linux</option>
+                <option value="3">MacOS</option>
+                <option value="4">Ubuntu</option>
+            </InputSelect>
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label class="col-sm-2 col-form-label">
+            OS Version
+        </label>
+        <div class="col-sm-10">
+            <InputText class="form-control" placeholder="OS Version"
+                       @bind-Value="issue.OSVersion" />
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label class="col-sm-2 col-form-label">
+            Screenshot of Issue
+        </label>
+        <div class="col-sm-10">
+               <label>
+                    Upload up to @maxAllowedFiles of up to @maxFileSize bytes:
+                    <InputFile OnChange="@LoadFiles" multiple />
+                </label>
+        </div>
+    </div>
+    <div class="form-group row" style="margin-bottom: 10px;">
+        <label class="col-sm-2 col-form-label">
+            Additional Details
+        </label>
+        <div class="col-sm-10">
+            <InputTextArea @bind-Value="issue!.Details" />
+        </div>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Add</button>
+
+</EditForm>
+
+@code {
+    public Issue? issue { get; set; }
+
+    [Required, EnumDataType(typeof(TicketType))]
+    public TicketType? ticket { get; set; } = null;
+    [Required, EnumDataType(typeof(Priority))]
+    public Priority? priority { get; set; } = null;
+
+
+    private List<IBrowserFile> loadedFiles = new();
+    private long maxFileSize = 1024 * 15;
+    private int maxAllowedFiles = 3;
+    private bool isLoading;
+
+
+
+    protected override void OnInitialized(){
+        issue = new Issue();
+    }
+
+	private void OnFormValid()
+	{
+		Console.WriteLine("FORM SUBMITTED; GOOD JOB");
+	}
+
+	private void OnFormInValid()
+	{
+		Console.WriteLine("FORM INVALID; KEEP TRYING");
+	}
+
+    async Task CreateIssue()
+    {
+        await Repository.AddIssue(issue);
+        navManger.NavigateTo("/");
+    }
+
+    private async Task LoadFiles(InputFileChangeEventArgs e)
+    {
+        isLoading = true;
+        loadedFiles.Clear();
+
+        foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            try
+            {
+                loadedFiles.Add(file);
+
+                var trustedFileNameForFileStorage = Path.GetRandomFileName();
+                var path = Path.Combine(Environment.ContentRootPath,
+                        Environment.EnvironmentName, "unsafe_uploads",
+                        trustedFileNameForFileStorage);
+
+                await using FileStream fs = new(path, FileMode.Create);
+                await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        isLoading = false;
+    }
+
+}
