@@ -20,5 +20,6 @@ namespace DataKodBlazorServer.Data
         public string OSVersion {get;set;}
         public string File {get;set;}
         public string Details {get;set;}
+        
     }
 }
